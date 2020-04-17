@@ -186,7 +186,7 @@ def test():
     cols = 80
     g = GameBoard(rows, cols, (4, 4), (rows-1, cols-1))
     episode_len = (g.rows * g.cols)
-    episode_num = 1
+    episode_num = 50000
     g.q_learning(0.6, 0.9, 0.5, episode_len, episode_num)
     g.seeker.reset()
     pos_list = g.eval_control(episode_len)
