@@ -25,7 +25,7 @@ class Game(Thread):
         # CS
 
         episode_len = self.arena.rows * self.arena.cols
-        episode_num = 300000
+        episode_num = 1000
 
         # Initial learning
         self.arena.q_learning(0.6, 0.9, 0.5, episode_len, episode_num)
@@ -34,11 +34,11 @@ class Game(Thread):
 
         if self.arena.seeker.caught(self.arena.prey): return
         old_seeker = self.arena.seeker
-        episode_num = max(1, int(episode_num/500))
+        episode_num = max(1, int(episode_num/10))
 
         for r in range(1, self.rounds):
             prey = self.arena.eval_one_step_prey(old_seeker, self.arena.prey)
-            print("P " + str(self.arena.prey) + " ~> " + str(prey))
+            print("\tP " + str(self.arena.prey) + " ~> " + str(prey))
             new_seeker = self.arena.eval_one_step_seeker(old_seeker, self.arena.prey)
             old_seeker = new_seeker
             # CS
@@ -55,7 +55,6 @@ class Game(Thread):
                 self.arena.prey = prey
                 self.arena.q_learning(epsilon, 0.9, 0.5, episode_len, episode_num)
             self.arena.seeker = new_seeker
-
         self.finished = True
 
     def catch_prey(self):
@@ -78,8 +77,8 @@ class Game(Thread):
         self.finished = True
 
     def run(self):
-        #self.play()
-        self.catch_prey()
+        self.play()
+        #self.catch_prey()
 
     def is_finished(self):
         return self.finished
@@ -156,8 +155,8 @@ class AnimateGameBoard:
         index = 0
         def stop_waiting():
             return is_finished() or len(player_positions) > index
-
-        for i in range (rounds):
+        print("Gui Main loop...."+str(is_finished()) + " - " + str(len(player_positions)))
+        while not is_finished() and index < rounds:
             condition.acquire()
             if len(player_positions) <= index:
                 condition.wait_for(stop_waiting)
@@ -172,8 +171,6 @@ class AnimateGameBoard:
 
             # Draw new
             self.render_players(canvas, player_pos, new_pos)
-            canvas.pack()
-
             player_pos = new_pos
 
     def show(self, rounds):
@@ -193,13 +190,13 @@ class AnimateGameBoard:
 
         game = Game(self.arena, movements, player_positions, rounds)
         game.start()
-        self.show_seeker(game.is_finished, canvas, movements)
-        root.mainloop()
+        self.show_play(game.is_finished, canvas, player_positions, rounds)
         game.join()
+        root.mainloop()
 
 
 rows = 30
 cols = 40
-rounds =100#cols*rows
+rounds =10#cols*rows
 arena = seeker.GameBoard(rows, cols, (4, 4), (int(rows/2), int(cols/2)))
 AnimateGameBoard(arena).show(rounds)

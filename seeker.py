@@ -92,8 +92,8 @@ class GameBoard:
         print("\tStarting q-Learning ... episode length :={}, number of episodes:={}".format(episode_len, episode_num))
         for i in range(episode_num):
             # Wondering Start
-            #rand_seeker = self.seeker.get_random(self.rows, self.cols, self.is_valid_position)
-            #if rand_seeker: self.seeker = rand_seeker
+            rand_seeker = self.seeker.get_random(self.rows, self.cols, self.is_valid_position)
+            if rand_seeker: self.seeker = rand_seeker
             self.seeker.reset()
 
             for j in range(episode_len):
@@ -125,7 +125,7 @@ class GameBoard:
                 # Take epsilon-greedy Step
                 self.seeker = self.greedy_move_seeker(next_seekers) if random.uniform(0, 1) < epsilon else random.choice(next_seekers)
 
-            if i%5000 == 0 and i != 0:
+            if i % 10000 == 0 and i != 0:
                 p = self.non_zero/self.explored*100
                 print("\t{} ... Health : {}/{} := {:.2f}%".format(i, self.non_zero, self.explored, p))
                 if p > 98.0: break
@@ -164,7 +164,7 @@ class GameBoard:
                         count[i] = count[i] + 1
             return sums
         est = estimate_prey(preys)
-        print("\t\t prey moves :="+str(list(zip(est, preys))))
+        #print("\t\t prey moves :="+str(list(zip(est, preys))))
         maximum = max(est)
         maximals = []
         for i in range(len(preys)):
