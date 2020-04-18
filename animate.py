@@ -18,6 +18,9 @@ class Game(Thread):
         self.finished = False
         self.rounds = rounds
 
+    def forget(Q, beta):
+        for k in Q: Q[k] = beta * Q[k]
+
     def play(self):
         print("Catching a Moving Prey")
         # CS - Start position
@@ -27,23 +30,36 @@ class Game(Thread):
         condition.release()
         # CS
 
-        episode_len = 100#self.arena.rows * self.arena.cols
-        episode_num = 5000
+        episode_len = 100 #self.arena.rows * self.arena.cols
+        episode_num = 10000
 
         # Initial learning
         old_seeker = self.arena.seeker
         old_prey = shapes.Blob(self.arena.prey)
-
-        seeker_Q = exact_learning.q_learning_seeker(self.arena, self.arena.seeker, self.arena.prey, 0.6,0.9, 0.5, episode_len, episode_num, True)
-        prey_Q = exact_learning.q_learning_prey(self.arena, self.arena.seeker, self.arena.prey, 0.6, 0.9, 0.5, episode_len, episode_num, True)
+        seeker_Q = dict()
+        prey_Q = dict()
+        seeker_Q = exact_learning.q_learning_seeker(self.arena, seeker_Q, self.arena.seeker, self.arena.prey, 0.6,0.9, 0.5, episode_len, episode_num, True, False)
+        prey_Q = exact_learning.q_learning_prey(self.arena, prey_Q, self.arena.seeker, self.arena.prey, 0.6, 0.9, 0.5, episode_len, episode_num, True, False)
         #self.arena.q_learning(0.6, 0.9, 0.5, episode_len, episode_num)
 
-        episode_num = max(1, int(episode_num/5))
+        episode_num = max(1, int(episode_num/10))
         for r in range(1, self.rounds):
             print("Round " + str(r))
 
-            seeker_move = exact_learning.eval_seeker(self.arena, seeker_Q, old_seeker, old_prey.get_pos(), 4)
+            seeker_move = exact_learning.eval_seeker(self.arena, seeker_Q, old_seeker, old_prey.get_pos(), 1)
             prey_move = exact_learning.eval_prey(self.arena, prey_Q, old_seeker, old_prey.get_pos(), 1)
+            print("\t moves " + str(len(seeker_move)) + ", " + str(len(prey_move)))
+            for s in seeker_move:
+                if s.caught(old_prey.get_pos()):
+                    print("Prey Caught")
+                    condition.acquire()
+                    self.player_positions.append((s.get_representation(), old_prey.get_pos()))
+                    condition.notify()
+                    condition.release()
+
+            if not seeker_move:
+                print("Seeker cannot move")
+                break
 
             for s, p in zip(seeker_move, prey_move):
                 condition.acquire()
@@ -74,8 +90,10 @@ class Game(Thread):
 
             epsilon = 1 - 0.4*(r/rounds)
             learning = 0.5 + 0.5*math.sqrt(r/rounds)
-            seeker_Q = exact_learning.q_learning_seeker(self.arena, old_seeker, old_prey.get_pos(), 0.6, 0.9, learning, episode_len, episode_num, False)
-            prey_Q = exact_learning.q_learning_prey(self.arena, old_seeker, old_prey.get_pos(), 0.6, 0.9, learning, episode_len, episode_num, False)
+            Game.forget(seeker_Q, 0.3)
+            Game.forget(prey_Q, 0.3)
+            seeker_Q = exact_learning.q_learning_seeker(self.arena, seeker_Q, old_seeker, old_prey.get_pos(), 0.6, 0.9, learning, episode_len, episode_num, False, False)
+            prey_Q = exact_learning.q_learning_prey(self.arena, prey_Q, old_seeker, old_prey.get_pos(), 0.6, 0.9, learning, episode_len, episode_num, False, False)
         self.finished = True
 
     def catch_prey(self):
@@ -219,8 +237,8 @@ class AnimateGameBoard:
         root.mainloop()
 
 
-rows = 30
-cols = 40
-rounds = 100#cols*rows
+rows = 60
+cols = 80
+rounds = cols*rows
 arena = seeker.GameBoard(rows, cols, (4, 4), (int(rows/2), int(cols/2)))
 AnimateGameBoard(arena).show(rounds)

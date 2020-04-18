@@ -59,19 +59,19 @@ def new_random_move(moves, visited):
     return random.choice(not_visited) if not_visited else random.choice(moves)
 
 
-def q_learning_prey(ar, seeker, prey, epsilon, gamma, alpha, episode_len, episode_num, early_exit):
-    print("\tStarting Prey's q-Learning ... episode length :={}, number of episodes :={}".format(episode_len, episode_num))
+def q_learning_prey(ar, Q, seeker, prey, epsilon, gamma, alpha, episode_len, episode_num, wondering, early_exit):
+    #print("\tStarting Prey's q-Learning ... episode length :={}, number of episodes :={}".format(episode_len, episode_num))
     avg_time = 0
     old_p = 0
-    Q = dict()
     non_zero = 0
     explored = 1
     curr_prey = shapes.Blob(prey)
 
     for i in range(episode_num):
         # Wondering Start
-        rand_prey = curr_prey.get_random(ar.rows, ar.cols, ar.is_valid_position)
-        if rand_prey: curr_prey = rand_prey
+        if wondering:
+            rand_prey = curr_prey.get_random(ar.rows, ar.cols, ar.is_valid_position)
+            if rand_prey: curr_prey = rand_prey
 
         start_time = time.time()
         episode = []
@@ -129,25 +129,25 @@ def q_learning_prey(ar, seeker, prey, epsilon, gamma, alpha, episode_len, episod
                 break
             else:
                 old_p = p
-    p = (float(non_zero / explored)) * 100
-    print("\t\tFinally. Health : {}/{} := {:.2f}%, Average Time for episode :=  "
-          "{:.2f}ms".format(non_zero, explored, p, avg_time * 1000))
+    #p = (float(non_zero / explored)) * 100
+    #print("\t\tFinally. Health : {}/{} := {:.2f}%, Average Time for episode :=  "
+    #      "{:.2f}ms".format(non_zero, explored, p, avg_time * 1000))
     return Q
 
 
-def q_learning_seeker(ar, seeker, prey, epsilon, gamma, alpha, episode_len, episode_num, early_exit):
-    print("\tStarting Seeker's q-Learning ... episode length :={}, number of episodes :={}".format(episode_len, episode_num))
+def q_learning_seeker(ar, Q, seeker, prey, epsilon, gamma, alpha, episode_len, episode_num, wondering, early_exit):
+    #print("\tStarting Seeker's q-Learning ... episode length :={}, number of episodes :={}".format(episode_len, episode_num))
     avg_time = 0
     old_p = 0
-    Q = dict()
     non_zero = 0
     explored = 1
     curr_seeker = seeker
 
     for i in range(episode_num):
         # Wondering Start
-        rand_seeker = seeker.get_random(ar.rows, ar.cols, ar.is_valid_position)
-        if rand_seeker: curr_seeker = rand_seeker
+        if wondering:
+            rand_seeker = seeker.get_random(ar.rows, ar.cols, ar.is_valid_position)
+            if rand_seeker: curr_seeker = rand_seeker
 
         start_time = time.time()
         episode = []
@@ -200,9 +200,9 @@ def q_learning_seeker(ar, seeker, prey, epsilon, gamma, alpha, episode_len, epis
             else:
                 old_p = p
 
-    p = (float(non_zero/explored)) * 100
-    print("\t\tFinally. Health : {}/{} := {:.2f}%, Average Time for episode :=  "
-          "{:.2f}ms".format(non_zero, explored, p, avg_time * 1000))
+    #p = (float(non_zero/explored)) * 100
+    #print("\t\tFinally. Health : {}/{} := {:.2f}%, Average Time for episode :=  "
+    #      "{:.2f}ms".format(non_zero, explored, p, avg_time * 1000))
     return Q
 
 

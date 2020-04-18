@@ -33,7 +33,7 @@ class GameBoard:
         for y in range(self.rows):
             for x in range(self.cols):
                 if (y, x) in forbidden : continue
-                count = 0.5
+                count = 0.3
                 total = 0
                 for i in range(3):
                     for j in range(3):
