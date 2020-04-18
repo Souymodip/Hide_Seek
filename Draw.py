@@ -102,6 +102,14 @@ def erase_seeker_body(body, canvas):
     canvas.create_rectangle(cor_y * pixel_width + 1, cor_x * pixel_width + 1, cor_y * pixel_width + pixel_width - 1,
                             cor_x * pixel_width + pixel_width - 1, outline="white", fill="white")
 
+
+def erase_prey(pos, canvas):
+    cor_x = pos[0]
+    cor_y = pos[1]
+    canvas.create_rectangle(cor_y * pixel_width + 1, cor_x * pixel_width + 1, cor_y * pixel_width + pixel_width - 1,
+                            cor_x * pixel_width + pixel_width - 1, outline="white", fill="white")
+
+
 class AnimateGameBoard:
     def __init__(self, game):
         self.game = game
@@ -115,15 +123,49 @@ class AnimateGameBoard:
         canvas.grid(row=0, column=0)
         #draw_grid(self.game.rows, self.game.cols, self.game.blocks, canvas)
         draw_only_blocks(self.game.rows, self.game.cols, self.game.blocks, canvas)
-        draw_prey(self.game.prey[0], self.game.prey[1], canvas)
+
         cycle_period = max(1, int(500/len(pos_list)) ) # time between fresh positions of the ball
         for pos in pos_list:
             # print(pos)
-            draw_seeker_body(pos, canvas)
+            draw_seeker_body(pos[0], canvas)
+            draw_prey(pos[1][0], pos[1][1], canvas)
             # draw_fill_box(pos[0], pos[1], canvas)
             canvas.update()
             canvas.after(cycle_period)
-            erase_seeker_body(pos, canvas)
-        draw_seeker_body(pos_list[-1], canvas)
+            erase_seeker_body(pos[0], canvas)
+            erase_prey(pos[1], canvas)
+        draw_seeker_body(pos_list[-1][0], canvas)
+        draw_prey(pos_list[-1][1][0], pos_list[-1][1][1], canvas)
+
+        #draw_fill_box(pos_list[-1][0], pos_list[-1][1], canvas)
+        root.mainloop()
+
+    def show_exact(self, pos_list):
+        root = Tk()
+        root.title("Game of Seeker")
+        cw = 800  # canvas width
+        ch = 650  # canvas height
+        canvas = Canvas(root, width=cw, height=ch, background="white")
+        canvas.grid(row=0, column=0)
+        #draw_grid(self.game.rows, self.game.cols, self.game.blocks, canvas)
+        draw_only_blocks(self.game.rows, self.game.cols, self.game.blocks, canvas)
+
+        cycle_period = max(1, int(500/len(pos_list)) ) # time between fresh positions of the ball
+        for s, p in zip(pos_list[0], pos_list[1]):
+            # print(pos)
+            s_rep = s.get_representation()
+            p_rep = p.get_pos()
+            draw_seeker_body(s_rep, canvas)
+            draw_prey(p_rep[0], p_rep[1], canvas)
+            # draw_fill_box(pos[0], pos[1], canvas)
+            canvas.update()
+            canvas.after(cycle_period)
+            erase_seeker_body(s_rep, canvas)
+            erase_prey(p_rep, canvas)
+        s_rep = pos_list[0][-1].get_representation()
+        p_rep = pos_list[1][-1].get_pos()
+        draw_seeker_body(s_rep, canvas)
+        draw_prey(p_rep[0], p_rep[1], canvas)
+
         #draw_fill_box(pos_list[-1][0], pos_list[-1][1], canvas)
         root.mainloop()
