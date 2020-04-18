@@ -80,7 +80,7 @@ class Snake:
             return None
 
     def get_hash(self):
-        return str(set(self.body))
+        return self.get_pos()
 
     def caught(self, pos):
         return pos in set(self.body)
@@ -92,7 +92,7 @@ class Snake:
 class Blob:
     def create_body_from_center(cor):
         body = {cor}
-        body = body.union(get_neighbourhood(cor))
+        body = body.union(get_manhattan_moves(cor[0], cor[1]))
         return body
 
     def __init__(self, center_cor):
@@ -123,7 +123,7 @@ class Blob:
         return None
 
     def get_hash(self):
-        return str(self.center_cor)
+        return self.center_cor
 
     def caught(self, pos):
         return pos in set(Blob.create_body_from_center(self.center_cor))

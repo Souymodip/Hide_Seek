@@ -1,6 +1,7 @@
 import random
 import Draw
 import shapes
+import time
 
 
 def get_manhattan_moves(y, x):
@@ -54,7 +55,7 @@ class GameBoard:
         #self.seeker = shapes.Blob(start)
         forbidden = {prey}
         forbidden.add(start)
-        for i in range(5):
+        for i in range(3):
             new_set = set()
             for coor in forbidden:
                 new_set = new_set.union(get_neighbourhood(coor))
@@ -78,8 +79,8 @@ class GameBoard:
             self.explored = self.explored + 1
         return self.Q[h]
 
-    def reward(self, seeker):
-        return 100 if seeker.caught(self.prey) else 0
+    def reward(self, seeker, prey):
+        return 100 if seeker.caught(prey) else 0
 
     def greedy_move_seeker(self, seekers):
         maximum = seekers[0], self.estimate(seekers[0])
@@ -88,20 +89,48 @@ class GameBoard:
         maximals = [seeker for seeker in seekers if self.estimate(seeker) == maximum[1]]
         return random.choice(maximals)
 
+    def new_greedy_move_seeker(self, seekers, visited):
+        maximum = seekers[0], self.estimate(seekers[0])
+        for seeker in seekers:
+            if self.estimate(seeker) > maximum[1]: maximum = seeker, self.estimate(seeker)
+        maximals = [seeker for seeker in seekers if self.estimate(seeker) == maximum[1]]
+        not_visited = [s for s in maximals if s.get_pos() not in visited]
+        return random.choice(not_visited) if not_visited else random.choice(maximals)
+
+    def new_random_move_seeker(self, seekers, visited):
+        not_visited = [s for s in seekers if s.get_pos() not in visited]
+        return random.choice(not_visited) if not_visited else random.choice(seekers)
+
+    def random_move_seeker(self, seekers):
+        return random.choice(seekers)
+
     def q_learning(self, epsilon, gamma, alpha, episode_len, episode_num):
-        print("\tStarting q-Learning ... episode length :={}, number of episodes:={}".format(episode_len, episode_num))
+        print("\tStarting q-Learning ... episode length :={}, number of episodes :={}".format(episode_len, episode_num))
+        avg_time = 0
+        old_p = 0
         for i in range(episode_num):
             # Wondering Start
             rand_seeker = self.seeker.get_random(self.rows, self.cols, self.is_valid_position)
             if rand_seeker: self.seeker = rand_seeker
-            self.seeker.reset()
 
+            start_time = time.time()
+            episode = []
+            visited = set()
             for j in range(episode_len):
                 h = self.seeker.get_hash()
-
+                episode.append(self.seeker)
+                visited.add(self.seeker)
                 if self.seeker.caught(self.prey):
+                    G = self.reward(self.seeker, self.prey)
                     if h not in self.Q:
-                        self.Q[h] = self.reward(self.seeker)
+                        self.Q[h] = G
+                    # Back propagating discounted reward
+                    for s in reversed(episode[:-1]):
+                        G = gamma * G
+                        lhash = s.get_hash()
+                        if lhash not in self.Q or self.Q[lhash] == 0 :
+                            self.Q[lhash] = G
+                            self.non_zero = self.non_zero + 1
                     break
 
                 # Get legal next moves
@@ -116,32 +145,40 @@ class GameBoard:
                 old_val = 0
                 if h in self.Q:
                     old_val = self.Q[h]
-                    self.Q[h] = old_val + alpha *(self.reward(self.seeker) + gamma * max_estimates - old_val)
+                    self.Q[h] = old_val + alpha *(self.reward(self.seeker, self.prey) + gamma * max_estimates - old_val)
                 else:
-                    self.Q[h] = alpha * (self.reward(self.seeker) + gamma * max_estimates)
+                    self.Q[h] = alpha * (self.reward(self.seeker, self.prey) + gamma * max_estimates)
                     self.explored = self.explored + 1
                 if old_val == 0 and self.Q[h] != 0: self.non_zero = self.non_zero + 1
 
                 # Take epsilon-greedy Step
-                self.seeker = self.greedy_move_seeker(next_seekers) if random.uniform(0, 1) < epsilon else random.choice(next_seekers)
-
-            if i % 10000 == 0 and i != 0:
+                self.seeker = self.new_greedy_move_seeker(next_seekers, visited) \
+                    if random.uniform(0, 1) < epsilon else self.new_random_move_seeker(next_seekers, visited)
+            avg_time = (avg_time * (i) + (time.time() - start_time))/(i+1)
+            if i % 1000 == 0 and i != 0:
                 p = self.non_zero/self.explored*100
-                print("\t{} ... Health : {}/{} := {:.2f}%".format(i, self.non_zero, self.explored, p))
-                if p > 98.0: break
+                print("\t{}. Health : {}/{} := {:.2f}%, Average Time for episode := "
+                      "{:.2f}ms".format(i, self.non_zero, self.explored, p, avg_time*1000))
+                if p > 0 and p - old_p < 0.1: break
+                else: old_p = p
 
         p = (float(self.non_zero) / float(self.explored)) * 100
-        print("\tFinally ... Health : {:d}/{:d} := {:.2f}%".format(self.non_zero, self.explored, p))
+        print("\tFinally. Health : {}/{} := {:.2f}%, Average Time for episode :=  "
+              "{:.2f}ms".format(self.non_zero, self.explored, p, avg_time*1000))
 
     def eval_control(self, episode_len):
         print("\tEvaluating Optimal Strategy...")
         episode = []
+        visited = set()
+        estimate = self.Q[self.seeker.get_hash()] if self.seeker.get_hash() in self.Q else 0
+        print("\t Q" + str(self.seeker.get_pos()) +" := " +str(estimate))
         for i in range(episode_len):
-            episode.append(self.seeker.get_representation())
+            episode.append((self.seeker.get_representation(), self.prey))
+            visited.add(self.seeker.get_pos())
             if self.seeker.caught(self.prey): break
             choices = self.seeker.moves(self.is_valid_position)
             if choices:
-                self.seeker = self.greedy_move_seeker(choices)
+                self.seeker = self.new_greedy_move_seeker(choices, visited)
             else:
                 break
         return episode
@@ -181,24 +218,21 @@ class GameBoard:
             return self.greedy_move_prey(choices) if choices else prey
 
 
-def test():
+if __name__ == "__main__":
     rows = 60
     cols = 80
     g = GameBoard(rows, cols, (4, 4), (rows-1, cols-1))
-    episode_len = (g.rows * g.cols)
+    episode_len = int((g.rows * g.cols)/2)
     episode_num = 50000
-    g.q_learning(0.6, 0.9, 0.5, episode_len, episode_num)
+    g.q_learning(0.7, 0.9, 0.5, episode_len, episode_num)
     g.seeker.reset()
     pos_list = g.eval_control(episode_len)
 
     ani = Draw.AnimateGameBoard(g)
     ani.show(pos_list)
-    for i in range (5):
+    for i in range(5):
         seeker = g.seeker.get_random(g.rows, g.cols, g.is_valid_position)
         if seeker: g.seeker = seeker
         pos_list = g.eval_control(episode_len)
         ani.show(pos_list)
 
-
-if __name__ =="__main__":
-    test()
